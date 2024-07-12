@@ -1,0 +1,175 @@
+import os
+from google.cloud import texttospeech
+import pyperclip
+import keyboard
+import time
+import pygame
+import io
+import threading
+import tkinter as tk
+from tkinter import ttk
+
+# Variable for if binding is toggled on or off
+power_toggle = 0
+
+# Set up the environment variable for authentication
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "CloudKey.json"
+
+# Initialize the Text-to-Speech client
+client = texttospeech.TextToSpeechClient()
+pygame.mixer.init()
+
+
+def test_voice():
+    text_to_speech("Testing voice", speaking_rate=1, voice_name=app.combo_box.get())
+
+
+def switch_and_execute():
+    try:
+        # Switch to the last active window
+        keyboard.send('alt+tab')
+        time.sleep(0.5)
+        handle_key_press()
+    except Exception as e:
+        print(f'Error in switch_and_execute: {e}')
+
+
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("TTS")
+
+        # Set the window to always be on top
+        self.attributes('-topmost', True)
+
+        # Toggle Button
+        self.toggle_button = ttk.Button(self, text="Bind: OFF", command=self.toggle)
+        self.toggle_button.grid(row=0, column=0, pady=5, padx=5)
+
+        # Uneditable ComboBox and Test Button
+        self.combo_box = ttk.Combobox(self, values=["en-GB-Wavenet-A", "en-GB-Wavenet-B", "en-GB-Wavenet-C", "en-GB-Wavenet-D", "en-GB-Wavenet-F",])
+        self.combo_box.state(['readonly'])
+        self.combo_box.current(1)
+        self.combo_box.grid(row=0, column=1, pady=5, padx=5)
+
+        self.test_button = ttk.Button(self, text="Test", command=test_voice)
+        self.test_button.grid(row=0, column=2, pady=5, padx=5)
+
+        # Binding Label and ComboBox
+        self.binding_label = ttk.Label(self, text="Binding:")
+        self.binding_label.grid(row=1, column=0, pady=5, padx=5, sticky='E')
+
+        self.binding_combo_box = ttk.Combobox(self, values=["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9"])
+        self.binding_combo_box.current(3)
+        self.binding_combo_box.grid(row=1, column=1, pady=5, padx=5, sticky='W')
+
+        self.switch_button = ttk.Button(self, text="Read Text ♪", command=switch_and_execute)
+        self.switch_button.grid(row=1, column=2, pady=5, padx=5, sticky='W')
+
+        # Volume Slider
+        self.volume_label = ttk.Label(self, text="Volume:")
+        self.volume_label.grid(row=2, column=0, pady=5, padx=5, sticky='E')
+
+        self.volume_slider = ttk.Scale(self, from_=0, to=100, orient='horizontal', command=self.set_volume)
+        self.volume_slider.set(50)
+        self.volume_slider.grid(row=2, column=1, columnspan=2, pady=5, padx=5, sticky='EW')
+
+        self.update_idletasks()
+        self.geometry(f"{self.winfo_width()}x{self.winfo_height()}")
+        self.resizable(False, False)
+
+    def toggle(self):
+        global power_toggle
+        if power_toggle == 1:
+            self.toggle_button.configure(text="Bind: OFF")
+            keyboard.unhook_all_hotkeys()
+            power_toggle = 0
+        else:
+            self.toggle_button.configure(text="Bind: ON")
+            power_toggle = 1
+            bind_key()
+
+    def set_volume(self, volume):
+        pygame.mixer.music.set_volume(float(volume) / 100)
+
+
+app = App()
+
+
+def bind_key():
+    # Set the binding
+    keyboard.add_hotkey(app.binding_combo_box.get(), handle_key_press)
+
+
+def text_to_speech(text, speaking_rate=1.0, voice_name="en-GB-Standard-A"):
+    try:
+        # Set the text input to be synthesized
+        synthesis_input = texttospeech.SynthesisInput(text=text)
+
+        # Build the voice request, select the language code and the ssml voice gender
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-GB",
+            name=voice_name,
+            ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+        )
+
+        # Select the type of audio file you want returned and set the speaking rate
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=speaking_rate
+        )
+
+        # Perform the text-to-speech request
+        response = client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
+        )
+
+        # Save the audio content to an MP3 file
+        audio_data = response.audio_content
+
+        audio_stream = io.BytesIO(audio_data)
+        pygame.mixer.music.load(audio_stream)
+        pygame.mixer.music.play()
+
+    except Exception as e:
+        print(f'Error in text_to_speech: {e}')
+
+
+def handle_key_press():
+    try:
+        if pygame.mixer.music.get_busy():
+            pygame.mixer.music.stop()
+            return
+        pyperclip.copy('')
+        # Simulate Ctrl+C to copy the selected text
+        text = pyperclip.paste()
+        start_time = time.time()
+
+        # Loop as copy was sometime missed, exits after 1 second
+        while text == "":
+            current_time = time.time()
+            current_time = current_time - start_time
+            if current_time >= 1:
+                print("Failed to find copy data.")
+                break
+            keyboard.press('ctrl')
+            keyboard.press('c')
+            time.sleep(0.05)
+            keyboard.release('c')
+            keyboard.release('ctrl')
+            text = pyperclip.paste()
+
+            if isinstance(text, str):
+                # Convert the text to speech with specified speaking rate and voice name
+                text_to_speech(text, speaking_rate=1, voice_name=app.combo_box.get())
+            else:
+                print("Error: Copy contains something other then text data.")
+    except Exception as e:
+        print(f'Error: {e}')
+
+
+# listener_thread = threading.Thread(target=start_hotkey_listener, daemon=True)
+# listener_thread.start()
+
+app.mainloop()
