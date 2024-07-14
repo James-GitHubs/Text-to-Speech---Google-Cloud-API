@@ -5,11 +5,9 @@ import keyboard
 import time
 import pygame
 import io
-import threading
 import tkinter as tk
 from tkinter import ttk
 
-# Variable for if binding is toggled on or off
 power_toggle = 0
 
 # Set up the environment variable for authentication
@@ -153,11 +151,8 @@ def handle_key_press():
             if current_time >= 1:
                 print("Failed to find copy data.")
                 break
-            keyboard.press('ctrl')
-            keyboard.press('c')
-            time.sleep(0.05)
-            keyboard.release('c')
-            keyboard.release('ctrl')
+
+            keyboard.send('ctrl+c')
             text = pyperclip.paste()
 
             if isinstance(text, str):
@@ -168,8 +163,5 @@ def handle_key_press():
     except Exception as e:
         print(f'Error: {e}')
 
-
-# listener_thread = threading.Thread(target=start_hotkey_listener, daemon=True)
-# listener_thread.start()
 
 app.mainloop()
