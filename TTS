@@ -179,15 +179,8 @@ def handle_key_press():
         text = pyperclip.paste()
         start_time = time.time()
 
-        # Retry copying text until successful or timeout after 1 second
-        while text == "":
-            current_time = time.time() - start_time
-            if current_time >= 1:
-                print("Failed to find copy data.")
-                break
-
-            keyboard.send('ctrl+c')
-            text = pyperclip.paste()
+        keyboard.send('ctrl+c')
+        text = pyperclip.paste()
 
         # Convert the copied text to speech
         if isinstance(text, str):
