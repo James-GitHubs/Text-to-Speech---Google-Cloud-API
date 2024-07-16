@@ -7,7 +7,10 @@ import pygame
 import io
 import tkinter as tk
 from tkinter import ttk
+import threading
 
+speed = 1.00
+pause = 0
 power_toggle = 0
 
 # Set up the environment variable for Google Cloud authentication
@@ -20,93 +23,154 @@ pygame.mixer.init()
 
 def test_voice():
     # Test the selected voice with the specified speed
-    speed = app.speed_slider.get()
-    print(speed)
     text_to_speech("Testing voice", speed, voice_name=app.combo_box.get())
 
 
-def switch_and_execute():
-    try:
-        # Switch to the last active window and execute key press handler
-        keyboard.send('alt+tab')
-        time.sleep(0.5)
-        handle_key_press()
-    except Exception as e:
-        print(f'Error in switch_and_execute: {e}')
-
 
 class App(tk.Tk):
-    def __init__(self):
+    def __init__(self, app=None):
         super().__init__()
 
         # Set up the main window
+        self.geometry("636x559+838+416")
+        self.minsize(120, 1)
+        self.maxsize(5764, 1421)
+        self.resizable(1,  1)
         self.title("TTS")
-        self.attributes('-topmost', True)
 
-        # Add the toggle button for enabling/disabling key binding
-        self.toggle_button = ttk.Button(self, text="Bind: OFF", command=self.toggle)
-        self.toggle_button.grid(row=0, column=0, pady=5, padx=5)
+        # Set window width to match the insert box size
+        self.geometry("636x559+838+416")
 
-        # Add the combo box for selecting the voice
-        self.combo_box = ttk.Combobox(self, values=[
-            "en-GB-Wavenet-A",
-            "en-GB-Wavenet-B",
-            "en-GB-Wavenet-C",
-            "en-GB-Wavenet-D",
-            "en-GB-Wavenet-E",
-            "en-US-Wavenet-A",
-            "en-US-Wavenet-B",
-            "en-US-Wavenet-C",
-            "en-US-Wavenet-D",
-            "en-US-Wavenet-E",
-            "en-US-Wavenet-F",
-            "en-US-Wavenet-G",
-            "en-US-Wavenet-H",
-            "en-US-Wavenet-I",
-            "en-US-Wavenet-J"
-        ])
+
+        self.combobox = tk.StringVar()
+
+        self.Labelframe1 = ttk.LabelFrame(self)
+        self.Labelframe1.place(relx=0.582, rely=0.018, relheight=0.114
+                               , relwidth=0.393)
+        self.Labelframe1.configure(relief='groove')
+        self.Labelframe1.configure(text='''HotKey Settings''')
+
+        self.toggle_button = ttk.Button(self.Labelframe1)
+        self.toggle_button.place(relx=0.04, rely=0.391, height=26, width=67
+                           , bordermode='ignore')
+        self.toggle_button.configure(text='''Bind: OFF''', command=self.toggle)
+
+        self.binding_combo_box = ttk.Combobox(self.Labelframe1, values=["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9"])
+        self.binding_combo_box.place(relx=0.36, rely=0.391, relheight=0.406
+                              , relwidth=0.588, bordermode='ignore')
+        self.binding_combo_box.current(3)
+
+        self.menubar = tk.Menu(self, font="TkMenuFont")
+        self.configure(menu=self.menubar)
+
+        self.TLabelframe1 = ttk.Labelframe(self)
+        self.TLabelframe1.place(relx=0.582, rely=0.141, relheight=0.113
+                                , relwidth=0.393)
+        self.TLabelframe1.configure(relief='')
+        self.TLabelframe1.configure(text='''Voice Setting''')
+
+        self.combo_box = ttk.Combobox(self.TLabelframe1, values=[
+                                    "en-GB-Wavenet-A",
+                                    "en-GB-Wavenet-B",
+                                    "en-GB-Wavenet-C",
+                                    "en-GB-Wavenet-D",
+                                    "en-GB-Wavenet-E",
+                                    "en-US-Wavenet-A",
+                                    "en-US-Wavenet-B",
+                                    "en-US-Wavenet-C",
+                                    "en-US-Wavenet-D",
+                                    "en-US-Wavenet-E",
+                                    "en-US-Wavenet-F",
+                                    "en-US-Wavenet-G",
+                                    "en-US-Wavenet-H",
+                                    "en-US-Wavenet-I",
+                                    "en-US-Wavenet-J"
+                                ])
         self.combo_box.state(['readonly'])
         self.combo_box.current(1)
-        self.combo_box.grid(row=0, column=1, pady=5, padx=5)
+        self.combo_box.place(relx=0.04, rely=0.397, relheight=0.381
+                              , relwidth=0.628, bordermode='ignore')
 
-        # Add the test button to test the selected voice
-        self.test_button = ttk.Button(self, text="Test", command=test_voice)
-        self.test_button.grid(row=0, column=2, pady=5, padx=5)
+        self.test_button = ttk.Button(self.TLabelframe1)
+        self.test_button.place(relx=0.72, rely=0.397, height=25, width=55
+                            , bordermode='ignore')
+        self.test_button.configure(text='''Test''')
+        self.test_button.configure(compound='left')
+        self.test_button.configure(command=test_voice)
 
-        # Add the label and combo box for selecting the binding key
-        self.binding_label = ttk.Label(self, text="Binding:")
-        self.binding_label.grid(row=1, column=0, pady=5, padx=5, sticky='E')
-        self.binding_combo_box = ttk.Combobox(self, values=["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9"])
-        self.binding_combo_box.current(3)
-        self.binding_combo_box.grid(row=1, column=1, pady=5, padx=5, sticky='W')
+        self.TLabel1 = ttk.Label(self)
+        self.TLabel1.place(relx=0.016, rely=0.018, height=17, width=123)
+        self.TLabel1.configure(font="-family {Segoe UI} -size 9")
+        self.TLabel1.configure(relief="flat")
+        self.TLabel1.configure(text='''Playing Status''')
+        self.TLabel1.configure(compound='left')
 
-        # Add the button to trigger the reading of text
-        self.switch_button = ttk.Button(self, text="Read Text ♪", command=switch_and_execute)
-        self.switch_button.grid(row=1, column=2, pady=5, padx=5, sticky='W')
+        self.TLabelframe2 = ttk.Labelframe(self)
+        self.TLabelframe2.place(relx=0.016, rely=0.074, relheight=0.18
+                                , relwidth=0.55)
+        self.TLabelframe2.configure(relief='')
+        self.TLabelframe2.configure(text='''Volume & Speed''')
 
-        # Add the volume label and slider for setting the volume
-        self.volume_label = ttk.Label(self, text="Volume:")
-        self.volume_label.grid(row=2, column=0, pady=5, padx=5, sticky='E')
-        self.volume_slider = ttk.Scale(self, from_=0, to=100, orient='horizontal', command=self.set_volume)
+        self.volume_slider = ttk.Scale(self.TLabelframe2, from_=0, to=1.0)
+        self.volume_slider.place(relx=0.029, rely=0.712, relheight=0.153
+                           , relwidth=0.943)
+        self.volume_slider.configure(length="330", from_=0, to=100, command=self.set_volume)
         self.volume_slider.set(50)
-        self.volume_slider.grid(row=2, column=1, columnspan=2, pady=5, padx=5, sticky='EW')
 
-        # Add the speed label, value label, and slider for setting the speaking speed
-        self.speed_label = ttk.Label(self, text="Speed:")
-        self.speed_label.grid(row=3, column=0, pady=5, padx=5, sticky='E')
-        self.speed_value_label = ttk.Label(self, text="1.00")
-        self.speed_value_label.grid(row=3, column=2, pady=5, padx=5, sticky='W')
-        self.speed_slider = ttk.Scale(self, from_=0.25, to=4, orient='horizontal', command=self.update_speed)
-        self.speed_slider.set(1)
-        self.speed_slider.grid(row=3, column=1, pady=5, padx=5, sticky='EW')
+        self.TLabel2 = ttk.Label(self.TLabelframe2)
+        self.TLabel2.place(relx=0.029, rely=0.572, height=17, width=53
+                           , bordermode='ignore')
+        self.TLabel2.configure(font="-family {Segoe UI} -size 9")
+        self.TLabel2.configure(relief="flat")
+        self.TLabel2.configure(text='''Volume''')
+        self.TLabel2.configure(compound='left')
+
+        self.TLabel3 = ttk.Label(self.TLabelframe2)
+        self.TLabel3.place(relx=0.029, rely=0.25, height=19, width=70
+                           , bordermode='ignore')
+        self.TLabel3.configure(text=f"Speed: {speed}")
+
+        self.speed_slider = ttk.Scale(self.TLabelframe2, from_=0, to=1.0)
+        self.speed_slider.place(relx=0.029, rely=0.351, relheight=0.153
+                           , relwidth=0.943)
+        self.speed_slider.configure(length="330", from_=0.25, to=4.00, command=self.update_speed)
+        self.speed_slider.set(1.00)
+
+
+
+        self.Labelframe2 = ttk.LabelFrame(self)
+        self.Labelframe2.place(relx=0.377, rely=0.267, relheight=0.098
+                               , relwidth=0.267)
+        self.Labelframe2.configure(relief='groove')
+        self.Labelframe2.configure(text='''Media Control''')
+
+        self.pause_button = ttk.Button(self.Labelframe2)
+        self.pause_button.place(relx=0.059, rely=0.364, height=26, width=57
+                           , bordermode='ignore')
+        self.pause_button.configure(text='''Play''', command=self.pause_voice)
+
+        self.read_text = ttk.Button(self)
+        self.read_text.place(relx=0.016, rely=0.32, height=26, width=67)
+        self.read_text.configure(text='''Read Text''')
+        self.read_text.configure(command=self.read_insert_box_text)
+
+        self.Entry1 = tk.Text()
+        self.Entry1.place(relx=0.016, rely=0.39, height=340, relwidth=0.965)
+        self.Entry1.configure(font="-family {Courier New} -size 10")
 
         self.update_idletasks()
         self.resizable(False, False)
 
+    def pause_voice(self):
+        global pause
+        pause = 1
+
     def update_speed(self, event=None):
+        global speed
         # Update the displayed speed value when the slider is adjusted
         speed = self.speed_slider.get()
-        self.speed_value_label.config(text=f"{float(speed):.2f}")
+        speed = round(speed, 2)
+        self.TLabel3.configure(text=f"Speed: {speed}")
 
     def toggle(self):
         global power_toggle
@@ -124,6 +188,12 @@ class App(tk.Tk):
         # Set the volume for the audio playback
         volume = self.volume_slider.get()
         pygame.mixer.music.set_volume(float(volume) / 100)
+
+    def read_insert_box_text(self):
+        # Read the text from the insert box and convert it to speech
+        text = self.Entry1.get("1.0", tk.END).strip()
+        if text:
+            text_to_speech(text, speed, voice_name=self.combo_box.get())
 
 
 app = App()
@@ -167,6 +237,46 @@ def text_to_speech(text, speaking_rate, voice_name="en-GB-Standard-A"):
         print(f'Error in text_to_speech: {e}')
 
 
+def copy_text():
+    # Clear the clipboard and copy selected text
+    pyperclip.copy('')
+    text = pyperclip.paste()
+    keyboard.press('ctrl')
+    keyboard.press('c')
+    time.sleep(0.1)
+    keyboard.release('c')
+    keyboard.release('ctrl')
+    text = pyperclip.paste()
+    return text
+
+
+def threaded_monitoring():
+    global pause
+    position = 0
+
+    # Wait until pygame first plays otherwise it will break
+    while not pygame.mixer.music.get_busy():
+        time.sleep(0.2)
+
+    # Loop that monitors status of pause button and if playing
+    while 1:
+        time.sleep(0.2)
+        if pygame.mixer.music.get_busy():
+            app.TLabel1.configure(text="Playing TTS...")
+            if pause == 1:
+                app.TLabel1.configure(text="TTS Paused.")
+                app.pause_button.configure(text="Play")
+                position = pygame.mixer.music.get_pos()
+                pygame.mixer.music.pause()
+                pause = 0
+        else:
+            app.TLabel1.configure(text="Waiting.")
+            if pause == 1:
+                app.pause_button.configure(text="Pause")
+                pygame.mixer.music.play(start=position / 1000)
+                pause = 0
+
+
 def handle_key_press():
     try:
         # Stop playback if audio is currently playing
@@ -174,22 +284,25 @@ def handle_key_press():
             pygame.mixer.music.stop()
             return
 
-        # Clear the clipboard and copy selected text
-        pyperclip.copy('')
-        text = pyperclip.paste()
-        start_time = time.time()
+        text = copy_text()
 
-        keyboard.send('ctrl+c')
-        text = pyperclip.paste()
+        if text == "":
+            print("No Text Found!")
 
-        # Convert the copied text to speech
-        if isinstance(text, str):
-            speed = app.speed_slider.get()
-            text_to_speech(text, speed, voice_name=app.combo_box.get())
-        else:
-            print("Error: Copy contains something other than text data.")
+        if text != "":
+            app.title("Converting Text...")
+            app.update()
+            # Convert the copied text to speech
+            if isinstance(text, str):
+                text_to_speech(text, speed, voice_name=app.combo_box.get())
+                app.title("TTS")
+                app.update()
+            else:
+                print("Error: Copy contains something other than text data.")
     except Exception as e:
         print(f'Error: {e}')
 
 
+thread = threading.Thread(target=threaded_monitoring)
+thread.start()
 app.mainloop()
