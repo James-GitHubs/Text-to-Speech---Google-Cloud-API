@@ -12,6 +12,7 @@ import threading
 speed = 1.00
 pause = 0
 power_toggle = 0
+closing = False
 
 # Set up the environment variable for Google Cloud authentication
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "CloudKey.json"
@@ -25,7 +26,13 @@ def test_voice():
     # Test the selected voice with the specified speed
     text_to_speech("Testing voice", speed, voice_name=app.combo_box.get())
 
-
+def switch_and_read():
+    keyboard.press('alt')
+    keyboard.press('tab')
+    keyboard.release('alt')
+    keyboard.release('tab')
+    time.sleep(0.1)
+    handle_key_press()
 
 class App(tk.Tk):
     def __init__(self, app=None):
@@ -154,12 +161,32 @@ class App(tk.Tk):
         self.read_text.configure(text='''Read Text''')
         self.read_text.configure(command=self.read_insert_box_text)
 
+        self.clear_text = ttk.Button(self)
+        self.clear_text.place(relx=0.12, rely=0.32, height=26, width=67)
+        self.clear_text.configure(text='''Clear Text''')
+        self.clear_text.configure(command=self.clear_text_field)
+
+        self.switch_read = ttk.Button(self)
+        self.switch_read.place(relx=0.85, rely=0.32, height=26, width=80)
+        self.switch_read.configure(text='''Switch Read''')
+        self.switch_read.configure(command=switch_and_read)
+
         self.Entry1 = tk.Text()
         self.Entry1.place(relx=0.016, rely=0.39, height=340, relwidth=0.965)
         self.Entry1.configure(font="-family {Courier New} -size 10")
 
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.update_idletasks()
         self.resizable(False, False)
+
+    def clear_text_field(self):
+        self.Entry1.delete("1.0", tk.END)
+
+    def on_closing(self):
+        global closing
+        closing = True
+        app.destroy()
+        exit()
 
     def pause_voice(self):
         global pause
@@ -256,13 +283,19 @@ def threaded_monitoring():
 
     # Wait until pygame first plays otherwise it will break
     while not pygame.mixer.music.get_busy():
+        if closing:
+            exit()
         time.sleep(0.2)
 
     # Loop that monitors status of pause button and if playing
     while 1:
+        if closing:
+            exit()
+
         time.sleep(0.2)
         if pygame.mixer.music.get_busy():
             app.TLabel1.configure(text="Playing TTS...")
+            app.pause_button.configure(text="Pause")
             if pause == 1:
                 app.TLabel1.configure(text="TTS Paused.")
                 app.pause_button.configure(text="Play")
@@ -290,6 +323,8 @@ def handle_key_press():
             print("No Text Found!")
 
         if text != "":
+            app.Entry1.delete("1.0", tk.END)
+            app.Entry1.insert(tk.END, pyperclip.paste())
             app.title("Converting Text...")
             app.update()
             # Convert the copied text to speech
