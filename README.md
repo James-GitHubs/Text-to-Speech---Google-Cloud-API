@@ -7,7 +7,7 @@ This application is a Text-to-Speech (TTS) tool that uses Google Cloud's Text-to
 Requires a Google Cloud key that can be registered for and downloaded free from Google. 
 
 ## Important
-Program uses clipboard to read text. Make sure to select text you want before either using binding or Read Text ♪ button. Program will automatically copy selected text to clipboard to read. If using Read Text ♪ button then it will return to last active window after pressing button and copy selected text.
+Program uses clipboard to read text or the text box. Make sure to select text you want before either using binding or Switch Read button . Program will automatically copy selected text to clipboard to read. If using Switch Read button then it will return to last active window after pressing button and copy selected text.
 
 ## Features
 
@@ -15,15 +15,4 @@ Program uses clipboard to read text. Make sure to select text you want before ei
 - Adjust the speaking speed and volume of the synthesized speech.
 - Bind a hotkey to trigger the TTS functionality.
 - Test the selected voice and speed with a sample text.
-
-## Requirements
-
-- Python 3.6 or higher
-- Google Cloud SDK
-- Google Cloud Text-to-Speech API
-- The following Python packages:
-  - `google-cloud-texttospeech`
-  - `pyperclip`
-  - `keyboard`
-  - `pygame`
-  - `tkinter`
+- Enter text into text box for reading
